@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <title>異体字チェックツール</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 600px;
+        margin: auto;
+        padding: 20px;
+      }
+      #dropArea {
+        border: 2px dashed #aaa;
+        padding: 20px;
+        text-align: center;
+        margin-top: 20px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+        color: #666;
+      }
+      #dropArea:hover {
+        background-color: #f9f9f9;
+      }
+      #processButton {
+        margin-top: 20px;
+        padding: 10px 20px;
+        font-size: 16px;
+        cursor: pointer;
+        background-color: #4caf50;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        transition: background-color 0.3s ease;
+      }
+      #processButton:hover {
+        background-color: #45a049;
+      }
+      input[type='radio'] {
+        margin: 0 5px 0 15px;
+      }
+      pre {
+        white-space: pre-wrap;
+        background-color: #f4f4f4;
+        padding: 10px;
+        border: 1px solid #ddd;
+        margin-top: 20px;
+        border-radius: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>異体字チェックツール</h1>
+    <p>
+      テキストファイルをドラッグ＆ドロップしてください。置換の有無を選択後、「処理開始」ボタンをクリックしてください。
+    </p>
+
+    <!-- ドラッグ＆ドロップエリア -->
+    <div id="dropArea">ここにテキストファイルをドロップしてください</div>
+
+    <!-- 置換の有無選択 -->
+    <div>
+      <input type="radio" id="noReplace" name="action" value="" checked />
+      <label for="noReplace">置換しない</label>
+      <input type="radio" id="replace" name="action" value="replace" />
+      <label for="replace">置換する</label>
+    </div>
+
+    <!-- 処理開始ボタン -->
+    <button id="processButton">処理開始</button>
+
+    <!-- 結果表示エリア -->
+    <pre id="output"></pre>
+
+    <!-- 異体字リストを読み込む -->
+    <script src="intaiji.js"></script>
+
+    <script>
+      let textContent = '';
+      let originalFileName = '';
+
+      // ドラッグ＆ドロップ処理
+      const dropArea = document.getElementById('dropArea');
+      dropArea.addEventListener('dragover', event => {
+        event.preventDefault();
+        dropArea.style.backgroundColor = '#f0f8ff';
+      });
+
+      dropArea.addEventListener('dragleave', () => {
+        dropArea.style.backgroundColor = '';
+      });
+
+      dropArea.addEventListener('drop', event => {
+        event.preventDefault();
+        dropArea.style.backgroundColor = '';
+        const file = event.dataTransfer.files[0];
+        if (file && file.type === 'text/plain') {
+          originalFileName = file.name;
+          readFileContent(file);
+        } else {
+          alert('テキストファイルをドロップしてください。');
+        }
+      });
+
+      // ファイルの内容を読み込む
+      function readFileContent(file) {
+        const reader = new FileReader();
+        reader.onload = event => {
+          textContent = event.target.result;
+          document.getElementById(
+            'output',
+          ).textContent = `ファイルが読み込まれました。\n\n${textContent}`;
+        };
+        reader.readAsText(file);
+      }
+
+      // 「処理開始」ボタンのクリックイベント
+      document.getElementById('processButton').addEventListener('click', () => {
+        if (!textContent) {
+          alert('テキストファイルをドロップしてください。');
+          return;
+        }
+
+        const action = document.querySelector(
+          'input[name="action"]:checked',
+        ).value;
+        let outputText = textContent;
+        const foundGaiji = [];
+
+        // 異体字チェック処理
+        for (const key in characterMap) {
+          if (outputText.includes(key)) {
+            foundGaiji.push(key);
+            if (action === 'replace') {
+              outputText = outputText.split(key).join(characterMap[key]);
+            }
+          }
+        }
+
+        // 結果表示
+        let result = '異体字チェック結果：\n';
+        result +=
+          foundGaiji.length > 0
+            ? `見つかった異体字: ${foundGaiji.join(', ')}\n\n`
+            : '異体字は見つかりませんでした。\n\n';
+
+        if (action === 'replace' && foundGaiji.length > 0) {
+          result += '置換後のテキスト:\n' + outputText;
+          const newFileName = getReplacedFileName(originalFileName); // 置換後のファイル名を作成
+          saveTextFile(outputText, newFileName); // 置換後のテキストを自動で保存
+        }
+
+        document.getElementById('output').textContent = result;
+      });
+
+      // 置換後のファイル名を生成する関数
+      function getReplacedFileName(fileName) {
+        const dotIndex = fileName.lastIndexOf('.');
+        if (dotIndex === -1) return fileName + '_replaced';
+        const name = fileName.slice(0, dotIndex);
+        const extension = fileName.slice(dotIndex);
+        return name + '_replaced' + extension;
+      }
+
+      // 置換後のファイルを保存する関数
+      function saveTextFile(content, fileName) {
+        const blob = new Blob([content], { type: 'text/plain' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = fileName;
+        link.click();
+        URL.revokeObjectURL(link.href);
+      }
+    </script>
+  </body>
+</html>
