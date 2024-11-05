@@ -94,11 +94,18 @@
         event.preventDefault();
         dropArea.style.backgroundColor = '';
         const file = event.dataTransfer.files[0];
-        if (file && file.type === 'text/plain') {
+
+        // サポートするファイル形式かどうかをチェック
+        if (
+          file &&
+          (file.type.startsWith('text/') || file.name.endsWith('.csv'))
+        ) {
           originalFileName = file.name;
           readFileContent(file);
         } else {
-          alert('テキストファイルをドロップしてください。');
+          alert(
+            'サポートされていないファイル形式です。テキストまたはCSVファイルをドロップしてください。',
+          );
         }
       });
 
